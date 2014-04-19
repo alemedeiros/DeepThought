@@ -39,12 +39,11 @@ data Game = Game { player    :: Player
 main :: IO ()
 main = do
         hSetBuffering stdout LineBuffering
+        -- Get Game informations
         pStr <- getLine
         szStr <- getLine
         boardStr <- replicateM (fst $ parseSize szStr) getLine
-        print $ parsePlayer pStr
-        print $ parseSize szStr
-        print $ parseBoard boardStr
+        print $ Game (parsePlayer pStr) (parseSize szStr) (parseBoard boardStr)
                 where
                         -- Parse strings to data structures
                         parsePlayer :: String -> Player
