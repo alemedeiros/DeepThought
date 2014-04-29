@@ -1,4 +1,4 @@
-all: RobotFighter
+all: DeepThought
 
-RobotFighter: RobotFighter.hs
+DeepThought: DeepThought.hs
 	ghc -o $@ --make $^
