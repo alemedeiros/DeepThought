@@ -1,4 +1,12 @@
 all: DeepThought
 
-DeepThought: DeepThought.hs
-	ghc -o $@ --make $^
+rebuild: clean all
+
+DeepThought: DeepThought.hs DataAcquisitor.hs InfiniteImprobabilityDrive.hs
+	ghc -o $@ --make $<
+
+clean:
+	rm -f *.o *.hi DeepThought
+
+
+.PHONY: all clean rebuild
