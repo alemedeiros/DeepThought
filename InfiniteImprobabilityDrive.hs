@@ -12,119 +12,67 @@ module InfiniteImprobabilityDrive where
 
 import DataAcquisitor
 import qualified Data.Foldable as F
+import Data.List
 import qualified Data.Sequence as S
 
 --
 -- Playing functions
 --
 
--- Update Game board acording to the specified Move.
-updateGame :: Move -> Game -> Game
-updateGame m (Game p sz b) = Game p sz $ updateBoard m b
-
--- Specifically, update the board with the given Move.
-updateBoard :: Move -> Board -> Board
-updateBoard (Move _ si sj di dj) b = setSquare (si,sj) Empty $ setSquare (di,dj) res b
-        where
-                src = getSquare (si,sj) b
-                dst = getSquare (di,dj) b
-                res = moveSquare src dst
-
--- Set a specific Square to the given coordinates.
-setSquare :: Coord -> Square -> Board -> Board
-setSquare (i,j) s b = S.update i updatedLine b
-        where
-                line = S.index b i
-                updatedLine = S.update j s line
-
--- Determine the resulting square of moving the first square towards the second.
-moveSquare :: Square -> Square -> Square
-moveSquare (R r) (P p) = R $ powerUp r p
-moveSquare (R r) Empty = R r
-moveSquare (R r1) (R r2) = battle r1 r2
-moveSquare _ _ = error "invalid move"
-
--- Determine the resulting Robot when it gets a PowerUp
-powerUp :: Robot -> PowerUp -> Robot
-powerUp (Robot p lr) (PowerUp lp) = Robot p (lr+lp)
-
--- Determine the result of a battle between two robots.
-battle :: Robot -> Robot -> Square
-battle (Robot p1 l1) (Robot p2 l2)
-        | l1 > l2 = R $ Robot p1 (l1-l2)
-        | l2 > l1 = R $ Robot p2 (l2-l1)
-        | otherwise = Empty
-
 -- Make a move based on the game available.
 makeMove :: Game -> Move
-makeMove g = validMove g $ S.index (S.filter (anyValid g) (myRobots g)) 0
+makeMove g@(Game p _ _ _ _) = bestMove g p
 
--- Make any valid move for a robot on the given coordinates
-validMove :: Game -> Coord -> Move
-validMove g@(Game p (h,w) _) (i,j) = Move p i j di dj
+-- Ordering function for Games, based on the output function.
+ordGame :: Game -> Game -> Ordering
+ordGame g0 g1 = compare o0 o1
         where
-                di = fst dest
-                dj = snd dest
-                -- destination coordinates
-                dest :: Coord
-                dest | i < h-1 && isValid g (i+1,j) = (i+1,j)
-                     | j < w-1 && isValid g (i,j+1) = (i,j+1)
-                     | i > 1   && isValid g (i-1,j) = (i-1,j)
-                     | j > 1   && isValid g (i,j-1) = (i,j-1)
+                o0 = output g0
+                o1 = output g1
 
+-- Get best next move, considering output funtion as a measure.
+bestMove :: Game -> Player -> Move
+bestMove g p = snd . maximumBy (\(g0,_) (g1,_) -> ordGame g0 g1) . map (\m -> (updateGame m g, m)) $ validMoves g p
 
--- The Robot in these coordinates has any valid movement?
-anyValid :: Game -> Coord -> Bool
-anyValid g@(Game _ (h,w) _) (i,j)
-        | i < h-1 && isValid g (i+1,j) = True
-        | j < w-1 && isValid g (i,j+1) = True
-        | i > 1   && isValid g (i-1,j) = True
-        | j > 1   && isValid g (i,j-1) = True
-        | otherwise = False
+-- Returna list of all the valid moves for player mp on game g.
+validMoves :: Game -> Player -> [Move]
+validMoves g@(Game p _ _ t e) mp
+        | p == mp   = allMoves g p t
+        | otherwise = allMoves g p e
 
--- Check if the specified coordinates are valid for a move
-isValid :: Game -> Coord -> Bool
-isValid (Game p _ b) c = isEmpty sq || isEnemy p sq || isResource sq
+-- Generates all moves for a player, based on the given team.
+allMoves :: Game -> Player -> Team -> [Move]
+allMoves g p = F.foldl (++) [] . fmap (allRobotMoves g p)
+
+-- generate all moves for the robot on the specified coordinates.
+allRobotMoves :: Game -> Player -> Coord -> [Move]
+allRobotMoves (Game _ sz b _ _) p (i,j) = map (uncurry (Move p i j)) valid
         where
-                sq = getSquare c b
+                valid = filter (isValid b sz p) moves
+                moves = [(i+1,j), (i,j+1), (i-1,j), (i,j-1)]
 
--- Check if Square is Empty.
-isEmpty :: Square -> Bool
-isEmpty Empty = True
-isEmpty _ = False
-
--- Check if Square has an enemy robot.
-isEnemy :: Player -> Square -> Bool
-isEnemy m (R (Robot p _))
-        | m /= p = True
-        | otherwise = False
-isEnemy _ _ = False
-
--- Check if Square has resources.
-isResource :: Square -> Bool
-isResource (P _) = True
-isResource _ = False
-
-
--- Find my Robots
--- TODO: keep my robots in a Seq inside the Game data type.
-myRobots :: Game -> S.Seq Coord
-myRobots (Game me _ b) = S.mapWithIndex (\_ (i,j,_) -> (i,j)) . F.foldl1 (S.><) $ S.mapWithIndex (\_ l -> onlyRobots l) indexedBoard
+-- Check if the specified coordinates are valid for a move destination for a
+-- player
+isValid :: Board -> Size -> Player -> Coord -> Bool
+isValid b (h,w) p c@(i,j)
+        | i < 0 || i > h-1 = False
+        | j < 0 || j > w-1 = False
+        | otherwise        = isEmpty sq || isEnemy p sq || isResource sq
         where
-                indexedBoard = S.mapWithIndex (\i l -> S.mapWithIndex (ind i) l) b
+                sq = getSquare b c
 
-                ind :: Int -> Int -> Square -> (Int,Int,Square)
-                ind i j s = (i,j,s)
+-- Determine the output of a game: sum of my level - sum of opponent level.
+output :: Game -> Int
+output (Game _ _ b t e)
+        | e == S.empty = 100
+        | t == S.empty = -100
+        | otherwise    = myLevel - opLevel
+        where
+                robots  = fmap (robotLevel . getSquare b)
+                myLevel = F.foldl (+) 0 $ robots t
+                opLevel = F.foldl (+) 0 $ robots e
 
-                onlyRobots = S.filter isMyRobot
-
-                isMyRobot :: (Int,Int,Square) -> Bool
-                isMyRobot (_,_,R (Robot p _))
-                        | me == p = True
-                        | otherwise = False
-                isMyRobot _ = False
-
-
--- Get the square of the given coordinates.
-getSquare :: Coord -> Board -> Square
-getSquare (i,j) b = S.index (S.index b i) j
+-- Determine the level of a robot inside a specific square.
+robotLevel :: Square -> Int
+robotLevel (R (Robot _ l)) = l
+robotLevel _               = 0

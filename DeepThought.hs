@@ -21,12 +21,14 @@ main = do
         pStr <- getLine
         szStr <- getLine
         let
-            p = whoAmI pStr
+            p  = whoAmI pStr
             sz = readSize $ words szStr
         brdStr <- replicateM (fst sz) getLine
         let
-            board = readBoard brdStr
-            game = Game p sz board
+            board   = readBoard brdStr
+            team    = findRobots p board
+            enemies =  findRobots (opponent p) board
+            game    = Game p sz board team enemies
         -- Start playing :-D
         startGame game
 
@@ -34,14 +36,15 @@ main = do
 --  if I am A, make my first move;
 --  if I am B, wait for A's move (entering main loop).
 startGame :: Game -> IO ()
-startGame g@(Game p _ _)
-        | p /= A = mainLoop g -- Just wait for opponent's move
-        | p == A = do
+startGame g@(Game p _ _ _ _)
+        | p /= A    = mainLoop g -- Just wait for opponent's move
+        | otherwise = do
                 let
                     mv :: Move
                     mv = makeMove g
                     ng :: Game -- New game state
                     ng = updateGame mv g
+                --print g
                 putStrLn $ prettyMove mv
                 mainLoop ng
 
@@ -57,5 +60,6 @@ mainLoop g = do
             mv = makeMove cg
             ng :: Game -- New game state
             ng = updateGame mv cg
+        --print cg
         putStrLn $ prettyMove mv -- Print move in defined format
         mainLoop ng
