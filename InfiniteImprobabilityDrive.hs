@@ -21,18 +21,16 @@ import qualified Data.Sequence as S
 
 -- Make a move based on the game available.
 makeMove :: Game -> Move
-makeMove g@(Game p _ _ _ _) = bestMove g p
+makeMove g@(Game p _ _ _ _) = snd $ alphaBetaPruning g p 6
+-- Save this line, since it works.
+--makeMove g@(Game p _ _ _ _) = bestMove g p
 
--- Ordering function for Games, based on the output function.
-ordGame :: Game -> Game -> Ordering
-ordGame g0 g1 = compare o0 o1
-        where
-                o0 = output g0
-                o1 = output g1
-
+--------------------------------------------------------------------------------
+-- Current move generator.
 -- Get best next move, considering output funtion as a measure.
 bestMove :: Game -> Player -> Move
 bestMove g p = snd . maximumBy (\(g0,_) (g1,_) -> ordGame g0 g1) . map (\m -> (updateGame m g, m)) $ validMoves g p
+--------------------------------------------------------------------------------
 
 -- Returna list of all the valid moves for player mp on game g.
 validMoves :: Game -> Player -> [Move]
@@ -61,6 +59,59 @@ isValid b (h,w) p c@(i,j)
         where
                 sq = getSquare b c
 
+--
+-- Alpha Beta Pruning functions
+--
+
+-- main alpha beta pruning function.
+alphaBetaPruning :: Game -> Player -> Int -> (Int,Move)
+alphaBetaPruning g p 1 = let res = output g
+                         in (res, bestMove g p)
+alphaBetaPruning g@(Game gp _ _ t e) p d
+        | gp == p   = resMax . foldl (maxFunction g d) (-200,200,Move p 0 0 0 0) $ allMoves g p t -- Max
+        | otherwise = resMin . foldl (minFunction g d) (-200,200,Move p 0 0 0 0) $ allMoves g p e -- Min
+       where
+               resMax (a,_,mv) = (a,mv)
+               resMin (_,b,mv) = (b,mv)
+
+maxFunction :: Game -> Int -> (Int,Int,Move) -> Move -> (Int,Int,Move)
+maxFunction g@(Game p _ _ _ _) d (a,b,m) nm
+        | a >= b    = (a,     b,  m)  -- Pruned
+        | nmRes > a = (nmRes, b, nm)
+        | otherwise = (a,     b,  m)
+       where
+               op    = opponent p
+               nmRes = fst . alphaBetaPruning (updateGame nm g) op $ d-1
+
+minFunction :: Game -> Int -> (Int,Int,Move) -> Move -> (Int,Int,Move)
+minFunction g@(Game p _ _ _ _) d (a,b,m) nm
+        | a >= b    = (a,     b,  m)  -- Pruned
+        | nmRes < b = (a, nmRes, nm)
+        | otherwise = (a,     b,  m)
+       where
+               nmRes = fst . alphaBetaPruning (updateGame nm g) p $ d-1
+
+--
+-- Game state analysis functions
+--
+
+-- Ordering function for Moves, based on the output function applied on the
+-- updated Game.
+ordMove :: Game -> Move -> Move -> Ordering
+ordMove g m0 m1 = ordGame (updateGame m0 g) (updateGame m1 g)
+
+-- Ordering function for Games, based on the output function.
+ordGame :: Game -> Game -> Ordering
+ordGame g0 g1 = compare o0 o1
+        where
+                o0 = output g0
+                o1 = output g1
+
+-- Determine the level of a robot inside a specific square.
+robotLevel :: Square -> Int
+robotLevel (R (Robot _ l)) = l
+robotLevel _               = 0
+
 -- Determine the output of a game: sum of my level - sum of opponent level.
 output :: Game -> Int
 output (Game _ _ b t e)
@@ -71,8 +122,3 @@ output (Game _ _ b t e)
                 robots  = fmap (robotLevel . getSquare b)
                 myLevel = F.foldl (+) 0 $ robots t
                 opLevel = F.foldl (+) 0 $ robots e
-
--- Determine the level of a robot inside a specific square.
-robotLevel :: Square -> Int
-robotLevel (R (Robot _ l)) = l
-robotLevel _               = 0
