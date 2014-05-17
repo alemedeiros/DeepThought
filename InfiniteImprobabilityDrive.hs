@@ -21,7 +21,7 @@ import qualified Data.Sequence as S
 
 -- Make a move based on the game available.
 makeMove :: Game -> Move
-makeMove g@(Game p _ _ _ _) = snd $ alphaBetaPruning g p 6
+makeMove g@(Game p _ _ _ _) = snd $ alphaBetaPruning g p 5
 -- Save this line, since it works.
 --makeMove g@(Game p _ _ _ _) = bestMove g p
 
