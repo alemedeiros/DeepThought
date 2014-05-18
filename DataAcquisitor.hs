@@ -93,11 +93,8 @@ findRobots :: Player -> Board -> Seq Coord
 findRobots p b = fmap (\(i,j,_) -> (i,j)) . F.foldl1 (><) $ fmap onlyRobots indexedBoard
         where
                 indexedBoard = mapWithIndex (\i l -> mapWithIndex (ind i) l) b
-
-                ind :: Int -> Int -> Square -> (Int,Int,Square)
-                ind i j s = (i,j,s)
-
-                onlyRobots = S.filter (\(_,_,sq) -> isRobot p sq)
+                ind i j s    = (i,j,s)
+                onlyRobots   = S.filter (\(_,_,sq) -> isRobot p sq)
 
 -- Get the square of the given coordinates.
 getSquare :: Board -> Coord -> Square
@@ -133,21 +130,21 @@ updateTeam (Move mp si sj di dj) b p t
         | otherwise                       = remove (si,sj)
         where
                 remove c = S.filter (/= c) t
-                dest = getSquare b (di,dj)
+                dest     = getSquare b (di,dj)
 
 -- Set a specific Square to the given coordinates.
 setSquare :: Coord -> Square -> Board -> Board
 setSquare (i,j) s b = update i updatedLine b
         where
-                line = index b i
+                line        = index b i
                 updatedLine = update j s line
 
 -- Determine the resulting square of moving the first square towards the second.
 moveSquare :: Square -> Square -> Square
-moveSquare (R r) (P p) = R $ powerUp r p
-moveSquare (R r) Empty = R r
+moveSquare (R  r) (P  p) = R $ powerUp r p
+moveSquare (R  r)  Empty = R r
 moveSquare (R r1) (R r2) = battle r1 r2
-moveSquare _ _ = error "invalid move"
+moveSquare  _      _     = error "invalid move"
 
 -- Determine the resulting Robot when it gets a PowerUp
 powerUp :: Robot -> PowerUp -> Robot
@@ -156,8 +153,8 @@ powerUp (Robot p lr) (PowerUp lp) = Robot p (lr+lp)
 -- Determine the result of a battle between two robots.
 battle :: Robot -> Robot -> Square
 battle (Robot p1 l1) (Robot p2 l2)
-        | l1 > l2  = R $ Robot p1 (l1-l2)
-        | l2 > l1  = R $ Robot p2 (l2-l1)
+        | l1 > l2   = R $ Robot p1 (l1-l2)
+        | l2 > l1   = R $ Robot p2 (l2-l1)
         | otherwise = Empty
 
 --
@@ -167,7 +164,7 @@ battle (Robot p1 l1) (Robot p2 l2)
 -- Check if Square is Empty.
 isEmpty :: Square -> Bool
 isEmpty Empty = True
-isEmpty _ = False
+isEmpty _     = False
 
 -- Check if Square has an enemy robot.
 isEnemy :: Player -> Square -> Bool
@@ -186,7 +183,7 @@ isRobot _ _         = False
 -- Check if Square has resources.
 isResource :: Square -> Bool
 isResource (P _) = True
-isResource _ = False
+isResource _     = False
 
 --
 -- Pretty priting functions

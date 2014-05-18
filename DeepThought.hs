@@ -40,11 +40,8 @@ startGame g@(Game p _ _ _ _)
         | p /= A    = mainLoop g -- Just wait for opponent's move
         | otherwise = do
                 let
-                    mv :: Move
                     mv = makeMove g
-                    ng :: Game -- New game state
                     ng = updateGame mv g
-                --print g
                 putStrLn $ prettyMove mv
                 mainLoop ng
 
@@ -54,14 +51,8 @@ mainLoop :: Game -> IO ()
 mainLoop g = do
         mvStr <- getLine
         let
-            cg :: Game -- Current game state
             cg = updateGame (readMove mvStr) g
-            --cg@(Game _ _ _ t e) = updateGame (readMove mvStr) g
-            mv :: Move
             mv = makeMove cg
-            ng :: Game -- New game state
             ng = updateGame mv cg
-        --hPrint stderr t
-        --hPrint stderr e
         putStrLn $ prettyMove mv -- Print move in defined format
         mainLoop ng

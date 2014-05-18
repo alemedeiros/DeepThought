@@ -15,9 +15,6 @@ import qualified Data.Foldable as F
 import Data.List
 import qualified Data.Sequence as S
 
--- Debug
---import Debug.Trace
-
 --
 -- Playing functions
 --
@@ -25,15 +22,10 @@ import qualified Data.Sequence as S
 -- Make a move based on the game available.
 makeMove :: Game -> Move
 makeMove g@(Game p _ _ _ _) = snd $ alphaBetaPruning g p 4
--- Save this line, since it works.
---makeMove g@(Game p _ _ _ _) = bestMove g p
 
---------------------------------------------------------------------------------
--- Current move generator.
 -- Get best next move, considering output funtion as a measure.
 bestMove :: Game -> Player -> Move
 bestMove g p = snd . maximumBy (\(g0,_) (g1,_) -> ordGame g0 g1) . map (\m -> (updateGame m g, m)) $ validMoves g p
---------------------------------------------------------------------------------
 
 -- Returna list of all the valid moves for player mp on game g.
 validMoves :: Game -> Player -> [Move]
@@ -66,7 +58,7 @@ isValid b (h,w) p c@(i,j)
 -- Alpha Beta Pruning functions
 --
 
--- main alpha beta pruning function.
+-- Main alpha beta pruning function.
 alphaBetaPruning :: Game -> Player -> Int -> (Int,Move)
 alphaBetaPruning g p 1 = let res = output g
                          in (res, bestMove g p)
@@ -78,11 +70,8 @@ alphaBetaPruning g@(Game gp _ _ t e) p d
                resMin (_,b,mv) = (b,mv)
                mt = allMoves g p t
                me = allMoves g p e
-             --mt = trace ("team moves :" ++ show tdebug) tdebug
-             --tdebug = allMoves g p t
-             --me = trace ("enemy moves:" ++ show edebug) edebug
-             --edebug = allMoves g p e
 
+-- Maximizing step of alpha beta pruning algorithm.
 maxFunction :: Game -> Int -> (Int,Int,Move) -> Move -> (Int,Int,Move)
 maxFunction g@(Game p _ _ _ _) d (a,b,m) nm
         | a >= b    = (a,     b,  m)  -- Pruned
@@ -92,6 +81,7 @@ maxFunction g@(Game p _ _ _ _) d (a,b,m) nm
                op    = opponent p
                nmRes = fst . alphaBetaPruning (updateGame nm g) op $ d-1
 
+-- Minimizing step of alpha beta pruning algorithm.
 minFunction :: Game -> Int -> (Int,Int,Move) -> Move -> (Int,Int,Move)
 minFunction g@(Game p _ _ _ _) d (a,b,m) nm
         | a >= b    = (a,     b,  m)  -- Pruned
