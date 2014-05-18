@@ -15,13 +15,16 @@ import qualified Data.Foldable as F
 import Data.List
 import qualified Data.Sequence as S
 
+-- Debug
+--import Debug.Trace
+
 --
 -- Playing functions
 --
 
 -- Make a move based on the game available.
 makeMove :: Game -> Move
-makeMove g@(Game p _ _ _ _) = snd $ alphaBetaPruning g p 5
+makeMove g@(Game p _ _ _ _) = snd $ alphaBetaPruning g p 4
 -- Save this line, since it works.
 --makeMove g@(Game p _ _ _ _) = bestMove g p
 
@@ -68,11 +71,17 @@ alphaBetaPruning :: Game -> Player -> Int -> (Int,Move)
 alphaBetaPruning g p 1 = let res = output g
                          in (res, bestMove g p)
 alphaBetaPruning g@(Game gp _ _ t e) p d
-        | gp == p   = resMax . foldl (maxFunction g d) (-200,200,Move p 0 0 0 0) $ allMoves g p t -- Max
-        | otherwise = resMin . foldl (minFunction g d) (-200,200,Move p 0 0 0 0) $ allMoves g p e -- Min
+        | gp == p   = resMax . foldl (maxFunction g d) (-99999,99999,head mt) $ mt -- Max
+        | otherwise = resMin . foldl (minFunction g d) (-99999,99999,head me) $ me -- Min
        where
                resMax (a,_,mv) = (a,mv)
                resMin (_,b,mv) = (b,mv)
+               mt = allMoves g p t
+               me = allMoves g p e
+             --mt = trace ("team moves :" ++ show tdebug) tdebug
+             --tdebug = allMoves g p t
+             --me = trace ("enemy moves:" ++ show edebug) edebug
+             --edebug = allMoves g p e
 
 maxFunction :: Game -> Int -> (Int,Int,Move) -> Move -> (Int,Int,Move)
 maxFunction g@(Game p _ _ _ _) d (a,b,m) nm
@@ -115,9 +124,9 @@ robotLevel _               = 0
 -- Determine the output of a game: sum of my level - sum of opponent level.
 output :: Game -> Int
 output (Game _ _ b t e)
-        | e == S.empty = 100
-        | t == S.empty = -100
-        | otherwise    = myLevel - opLevel
+        | e == S.empty = 10000
+        | t == S.empty = -10000
+        | otherwise    = S.length t * myLevel - S.length e * opLevel
         where
                 robots  = fmap (robotLevel . getSquare b)
                 myLevel = F.foldl (+) 0 $ robots t

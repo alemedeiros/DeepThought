@@ -56,10 +56,12 @@ mainLoop g = do
         let
             cg :: Game -- Current game state
             cg = updateGame (readMove mvStr) g
+            --cg@(Game _ _ _ t e) = updateGame (readMove mvStr) g
             mv :: Move
             mv = makeMove cg
             ng :: Game -- New game state
             ng = updateGame mv cg
-        --print cg
+        --hPrint stderr t
+        --hPrint stderr e
         putStrLn $ prettyMove mv -- Print move in defined format
         mainLoop ng
