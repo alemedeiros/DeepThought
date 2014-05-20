@@ -21,7 +21,7 @@ import qualified Data.Sequence as S
 
 -- Make a move based on the game available.
 makeMove :: Game -> Move
-makeMove g@(Game p _ _ _ _) = snd $ alphaBetaPruning g p 4
+makeMove g@(Game p _ _ _ _) = snd $ alphaBetaPruning g p 5
 
 -- Get best next move, considering output funtion as a measure.
 bestMove :: Game -> Player -> Move
@@ -116,7 +116,7 @@ output :: Game -> Int
 output (Game _ _ b t e)
         | e == S.empty = 10000
         | t == S.empty = -10000
-        | otherwise    = myTeam * myLevel - 2 * opTeam * opLevel
+        | otherwise    = 10 * myTeam - 20 * opTeam + myLevel -  opLevel
         where
                 robots  = fmap (robotLevel . getSquare b)
                 myLevel = F.foldl (+) 0 $ robots t
