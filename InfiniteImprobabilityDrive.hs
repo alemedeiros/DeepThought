@@ -116,7 +116,7 @@ output :: Game -> Int
 output (Game _ _ b t e)
         | e == S.empty = 10000
         | t == S.empty = -10000
-        | otherwise    = 10 * myTeam - 20 * opTeam + myLevel -  opLevel
+        | otherwise    = 20 * myTeam - 20 * opTeam + myLevel - 2 * opLevel
         where
                 robots  = fmap (robotLevel . getSquare b)
                 myLevel = F.foldl (+) 0 $ robots t
